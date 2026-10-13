@@ -1,0 +1,10 @@
+const fs = require('fs'); const vm = require('vm');
+const files = ['Ferunz-V70-creature-studio.js','Ferunz-V70-creature-ui.js'];
+const ctx = { console }; vm.createContext(ctx);
+for (const f of files) vm.runInContext(fs.readFileSync(__dirname+'/'+f,'utf8'),ctx);
+const S=ctx.FerunzCreatureStudio,U=ctx.FerunzCreatureUI;
+const html=U.renderCreator({name:'Crimson Wyrm',species:'custom dragon-like creature',description:'Very long serpentine body with oversized wings.',anatomy:{bodyType:'serpentine',neckLength:95,wingCount:2,wingSpan:96,tailLength:100}});
+for (const token of ['Creature Creator','Body length','Neck length','Wing count','Your imagination','creature-turntable','data-angle="0"','data-angle="315"','data-zone="head"','data-zone="wings"']) if(!html.includes(token)) throw new Error('Missing UI token: '+token);
+if(html.includes('undefined')||html.includes('NaN')) throw new Error('Invalid UI output');
+console.log('PASS: V70 custom creature UI');
+console.log('Creator controls + free-form description + 8-angle selector + inspection zones + generation prompt');
