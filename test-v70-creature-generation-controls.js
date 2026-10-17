@@ -1,0 +1,14 @@
+const fs=require('fs'), vm=require('vm');
+const files=['Ferunz-V70-creature-studio.js','Ferunz-V70-creature-assets.js','Ferunz-V70-creature-generation-controls.js'];
+const ctx={console,Date,JSON,Promise,isFinite,Number,String,Object,Array}; vm.createContext(ctx);
+for(const f of files) vm.runInContext(fs.readFileSync('/mnt/data/ferunz-v70/'+f,'utf8'),ctx,{filename:f});
+const S=ctx.FerunzCreatureStudio,A=ctx.FerunzCreatureAssets,G=ctx.FerunzCreatureGenerationControls;
+const c=S.normalizeCreature({name:'Emerald Serpent',bodyType:'serpentine',color:'green'}); const r=A.createAssetRecord(c);
+const st=G.createState(c,r); const up=G.update(st,{gen:7,vr:3,targetAngles:[0,90,270],prompt:'original green serpent dragon'});
+if(up.gen!==7||up.vr!==3||up.targetAngles.length!==3) throw Error('generation state update failed');
+const req=G.requestFor(c,up); if(req.assetId!==r.id||req.angles.length!==3||req.generation.gen!==7||req.generation.vr!==3||!req.prompt.includes('original green')) throw Error('generation request failed');
+const h=G.render(up); if(!h.includes('data-generation="prompt"')||!h.includes('data-generation="vr"')) throw Error('generation controls missing');
+for(const a of [0,45,90,135,180,225,270,315]) if(a!==90) A.attachAngleAsset(r,a,{uri:'x'+a});
+const mr=G.missingRequest(r,up); if(mr.angles.length!==1||mr.angles[0]!==90) throw Error('missing-angle request failed');
+console.log('PASS: V70 creature generation controls');
+console.log('Prompt/negative prompt + generation/variant + targeted angles + missing-angle regeneration');
