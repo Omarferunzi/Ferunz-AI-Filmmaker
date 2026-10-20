@@ -56,6 +56,105 @@ function download(name,data){const blob=new Blob([JSON.stringify(data,null,2)],{
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));$('creatureFields').classList.toggle('hidden',mode!=='creature');$('characterFields').classList.toggle('hidden',mode!=='character');render()}));document.querySelectorAll('input,select,textarea').forEach(el=>{el.addEventListener('input',()=>{const out=$(el.id+'Out');if(out)out.value=el.value;render()});el.addEventListener('change',render)});
 $('saveEntity').onclick=()=>{const c=getEntity();c.type=mode;const index=library.findIndex(e=>e.name===c.name&&e.type===c.type);if(index>=0)library[index]=c;else library.unshift(c);const ok=persist();renderLibrary();$('previewNotice').textContent=ok?'Saved to this browser’s local library.':'Could not save: browser storage may be full or disabled.'};$('resetForm').onclick=()=>location.reload();$('copyPrompt').onclick=async()=>{try{await navigator.clipboard.writeText(promptFor(getEntity()));$('copyPrompt').textContent='Prompt copied';setTimeout(()=>$('copyPrompt').textContent='Copy prompt',1400)}catch(e){window.prompt('Copy the prompt below:',promptFor(getEntity()))}};$('exportLibrary').onclick=()=>download('ferunz-v70-library.json',{format:'ferunz-v70-library',version:70,entities:library});$('importButton').onclick=()=>$('importFile').click();$('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());const items=Array.isArray(data)?data:data.entities;if(!Array.isArray(items))throw Error('Expected an entities array');items.forEach(x=>library.unshift(x));persist();renderLibrary();$('previewNotice').textContent=`Imported ${items.length} record(s).`}catch(err){$('previewNotice').textContent='Import failed: '+err.message}e.target.value=''};$('clearLibrary').onclick=()=>{if(confirm('Clear all entities saved in this browser?')){library=[];persist();renderLibrary()}};
 $('saveScene').onclick=()=>{sceneDraft={format:'ferunz-v70-scene',version:70,scene:val('sceneName'),entity:getEntity(),entityType:mode,angle:+val('activeAngle'),transform:{x:+val('posX')||0,y:+val('posY')||0,scale:Math.max(.01,+val('scale')||1)},savedAt:new Date().toISOString()};try{localStorage.setItem('ferunz-v70-scene',JSON.stringify(sceneDraft));$('sceneStatus').textContent='Scene draft saved locally at '+new Date(sceneDraft.savedAt).toLocaleString()}catch(e){$('sceneStatus').textContent='Could not save scene draft: browser storage unavailable'}};$('exportScene').onclick=()=>{const d=sceneDraft||{format:'ferunz-v70-scene',version:70,scene:val('sceneName'),entity:getEntity(),entityType:mode,angle:+val('activeAngle'),transform:{x:+val('posX')||0,y:+val('posY')||0,scale:Math.max(.01,+val('scale')||1)}};download('ferunz-v70-scene.json',d)};
+
+const generateImageButton = document.getElementById("generateImage");
+
+if (generateImageButton) {
+  generateImageButton.addEventListener("click", async () => {
+    const prompt = document.getElementById("prompt")?.value?.trim();
+
+    if (!prompt) {
+      alert("Please enter an image prompt first.");
+      return;
+    }
+
+    generateImageButton.disabled = true;
+    generateImageButton.textContent = "Generating...";
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Image generation failed.");
+      }
+
+      let image = document.getElementById("generatedImage");
+
+      if (!image) {
+        image = document.createElement("img");
+        image.id = "generatedImage";
+        image.alt = "Generated FERUNZ image";
+        image.style.cssText =
+          "display:block;max-width:100%;height:auto;margin:20px auto;border-radius:12px;";
+        generateImageButton.insertAdjacentElement("afterend", image);
+      }
+
+      image.src = result.image;
+      alert("Image generated successfully!");
+    } catch (error) {
+      alert(error.message || "Image generation failed.");
+    } finally {
+      generateImageButton.disabled = false;
+      generateImageButton.textContent = "Generate Image";
+    }
+  });
+}
+
+
+$('generateImage').onclick=async()=>{
+  const button=$('generateImage');
+  const originalText=button.textContent;
+  const prompt=promptFor(getEntity());
+
+  if(!prompt.trim()){
+    alert('Please enter a design brief first.');
+    return;
+  }
+
+  button.disabled=true;
+  button.textContent='Generating image...';
+  $('previewNotice').textContent='Sending your design to OpenAI...';
+
+  try{
+    const response=await fetch('/api/generate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt})
+    });
+
+    const result=await response.json();
+
+    if(!response.ok){
+      throw new Error(result.error||'Image generation failed.');
+    }
+
+    let image=$('generatedImage');
+
+    if(!image){
+      image=document.createElement('img');
+      image.id='generatedImage';
+      image.alt='AI-generated FERUNZ design';
+      image.style.cssText='display:block;width:100%;max-width:700px;height:auto;margin:16px auto;border-radius:12px;';
+      $('previewNotice').insertAdjacentElement('afterend',image);
+    }
+
+    image.src=result.image;
+    $('previewNotice').textContent='Image generated successfully.';
+  }catch(error){
+    $('previewNotice').textContent='Generation failed: '+error.message;
+  }finally{
+    button.disabled=false;
+    button.textContent=originalText;
+  }
+};
+
 render();renderLibrary();if(sceneDraft)$('sceneStatus').textContent='Previous scene draft found in local browser storage.';
 })();
+
 </script></body></html>
