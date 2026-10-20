@@ -63,10 +63,11 @@ if (generateImageButton) {
   generateImageButton.addEventListener("click", async () => {
     const prompt = document.getElementById("prompt")?.value?.trim();
 
-    if (!prompt) {
-      alert("Please enter an image prompt first.");
-      return;
-    }
+if (!prompt || !prompt.trim()) {
+  $('previewNotice').textContent =
+    'Please enter a design brief before generating.';
+  return;
+}
 
     generateImageButton.disabled = true;
     generateImageButton.textContent = "Generating...";
